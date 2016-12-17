@@ -1,18 +1,17 @@
 #python-inotify
 
-*inotify* functionality is available from the Linux kernel and allows you to register one or more directories for watching, and to simply block and wait for notification events. This is obviously far more efficient than polling one or more directories to determine if anything has changed. This is available in the Linux kernel as of version 2.6 .
+The library acts as a generator. All you have to do is loop, and you'll see one event at a time and it blocks in-between. After each cycle (all notified events were processed, or no events were received), you'll get a *None*. You may use this as an opportunity to perform other tasks, if your application is being primarily driven by *inotify* events. By default, we'll only block for one-second on queries to the kernel. This may be set to something else by passing a seconds-value into the constructor as *block_duration_s*.
 
-We've designed this library to act as a generator. All you have to do is loop, and you'll see one event at a time and block in-between. After each cycle (all notified events were processed, or no events were received), you'll get a *None*. You may use this as an opportunity to perform other tasks, if your application is being primarily driven by *inotify* events. By default, we'll only block for one-second on queries to the kernel. This may be set to something else by passing a seconds-value into the constructor as *block_duration_s*.
+```python
+import inotify.adapters
 
-    import inotify.adapters
+inot = inotify.adapters.Inotify()
+inot.add_watch(b'/tmp')
 
-    i = inotify.adapters.Inotify()
-
-    i.add_watch(b'/tmp')
-
-        for event in i.event_gen():
-            if event:
-                print(event)
+	for event in inot.event_gen():
+		if event:
+			print(event)
+```
 
 You may also choose to pass the list of directories to watch via the *paths* parameter of the constructor. This would work best in situations where your list of paths is static. Also, the remove_watch() call is included in the example, but is not strictly necessary. The *inotify* resources is cleaned-up, which would clean-up any *inotify*-internal watch resources as well.
 
@@ -20,18 +19,12 @@ Note that the directories to pass to the add_watch() and remove_watch() function
 
 ##Recursive Watching
 
-We also provide you with the ability to add a recursive watch on a path. It turns out that there's no low-cost way of doing this; That's the reason that this functionality isn't provided by the kernel. However, we recognize that this is, nonetheless, sometimes necessary.
+Since the kernel doesn't provide a recursive directory watching functionality it is implemented
+by this library. To recursively watch a directory simply use the `InotifyTree` adapter.
 
-Example::
-
-    i = inotify.adapters.InotifyTree('/tmp/watch_tree')
-
-    for event in i.event_gen():
-        # Do stuff...
-
-        pass
-
-The only substantial difference is the type of object that was instantiated. Everything else is the same.
+```python
+inot = inotify.adapters.InotifyTree('/tmp/watch_tree')
+```
 
 This will immediately recurse through the directory tree and add watches on all subdirectories. New directories will automatically have watches added for them and deleted directories will be cleaned-up.
 
